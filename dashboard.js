@@ -155,4 +155,198 @@ function displayPillarChart(pillarAnalysis) {
                 },
                 title: {
                     display: true,
-                    text: 'Content Volume by Pillar (Competito
+                    text: 'Content Volume by Pillar (Competitors - Last 30 Days)'
+                }
+            }
+        }
+    });
+}
+
+// Export report as text (simplified version)
+document.getElementById('exportReport').addEventListener('click', () => {
+    if (!currentReport) {
+        alert('No report to export. Run an analysis first!');
+        return;
+    }
+    
+    const reportText = `
+CONTENT GAP ANALYSIS REPORT
+Generated: ${new Date().toLocaleDateString()}
+
+EXECUTIVE SUMMARY
+${currentReport.executiveSummary}
+
+TOP GAPS
+${currentReport.topGaps?.map((gap, i) => `
+${i + 1}. ${gap.gap}
+   Pillar: ${gap.pillar}
+   Recommendation: ${gap.recommendation}
+   Leaders: ${gap.competitorExamples?.join(', ') || 'None'}
+`).join('\n') || 'None'}
+
+TRENDING THEMES
+${currentReport.trendingThemes?.join(', ') || 'None'}
+
+RECOMMENDED CONTENT
+${currentReport.recommendedContent?.map(rec => `
+- ${rec.title} (${rec.pillar}) - ${rec.timeframe}
+  ${rec.rationale}
+`).join('\n') || 'None'}
+    `.trim();
+    
+    // Create downloadable file
+    const blob = new Blob([reportText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `content-gap-report-${new Date().toISOString().split('T')[0]}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+// Load most recent report on page load
+async function loadLatestReport() {
+    try {
+        const snapshot = await gapReportsRef
+            .orderBy('generatedDate', 'desc')
+            .limit(1)
+            .get();
+        
+        if (!snapshot.empty) {
+            const reportData = snapshot.docs[0].data();
+            displayGapReport({
+                executiveSummary: reportData.executiveSummary,
+                topGaps: reportData.topGaps,
+                trendingThemes: reportData.trendingThemes,
+                recommendedContent: reportData.recommendedContent,
+                pillarAnalysis: reportData.pillarAnalysis
+            });
+            
+            const date = reportData.generatedDate?.toDate();
+            if (date) {
+                document.getElementById('lastAnalysis').textContent = 
+                    'Last updated: ' + date.toLocaleString();
+            }
+        } else {
+            document.getElementById('noDataMessage').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading latest report:', error);
+        document.getElementById('noDataMessage').style.display = 'block';
+    }
+}
+
+// Export all content for manual Claude analysis
+document.getElementById('exportAllContent').addEventListener('click', async () => {
+    try {
+        // Get all content items
+        const snapshot = await contentItemsRef.orderBy('collectedDate', 'desc').get();
+        
+        if (snapshot.empty) {
+            alert('No content to export. Add some competitor content first!');
+            return;
+        }
+        
+        // Organize content
+        const contentByCompetitor = {};
+        let totalItems = 0;
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const competitor = currentCompetitors.find(c => c.id === data.competitorId);
+            const competitorName = competitor?.name || 'Unknown';
+            
+            if (!contentByCompetitor[competitorName]) {
+                contentByCompetitor[competitorName] = [];
+            }
+            contentByCompetitor[competitorName].push(data);
+            totalItems++;
+        });
+        
+        // Generate export text
+        const exportText = `COMPETITIVE CONTENT ANALYSIS
+Export Date: ${new Date().toLocaleDateString()}
+Total Content Items: ${totalItems}
+Competitors Tracked: ${Object.keys(contentByCompetitor).join(', ')}
+
+========================================
+CONTENT PILLARS FOR ANALYSIS
+========================================
+
+1. Lifestyle/Self-Care
+2. Seasonal/Gifting
+3. Ingredient Education
+4. Sustainability
+5. Product Rituals
+6. Sensory Experience
+7. Problem-Solution
+
+========================================
+CONTENT BY COMPETITOR
+========================================
+
+${Object.entries(contentByCompetitor).map(([competitor, items]) => `
+${competitor.toUpperCase()} (${items.length} items)
+${'='.repeat(50)}
+
+${items.map((item, index) => `
+${index + 1}. ${item.title}
+   Platform: ${item.platform}
+   Date: ${item.publishDate?.toDate?.()?.toLocaleDateString() || 'No date'}
+   ${item.pillar ? `Pillar: ${item.pillar}` : ''}
+   
+   Content: ${item.content || 'No summary'}
+   URL: ${item.url}
+   
+`).join('')}
+`).join('')}
+
+========================================
+ANALYSIS REQUEST FOR CLAUDE
+========================================
+
+Please analyze this competitive content and provide:
+
+1. CONTENT GAP ANALYSIS
+   - Which pillars are competitors investing in most heavily?
+   - Which pillars am I underrepresented in?
+   - What specific themes/topics are trending across competitors?
+
+2. TOP 3 CONTENT GAPS
+   - Identify the biggest opportunities
+   - Provide specific content recommendations
+   - Note which competitors are doing this well
+
+3. TRENDING THEMES
+   - What topics/hashtags appear most frequently?
+   - Any seasonal opportunities coming up?
+   - Emerging trends in natural body care?
+
+4. RECOMMENDED CONTENT CALENDAR
+   - Suggest 5-7 specific content ideas for the next 30 days
+   - Organize by pillar
+   - Include rationale for each recommendation
+
+5. COMPETITOR INSIGHTS
+   - Which competitor has the strongest content strategy overall?
+   - What formats are performing best (video, carousel, blog)?
+   - Any standout examples worth studying?
+
+Please format your response with clear sections and actionable recommendations.`;
+        
+        // Create downloadable file
+        const blob = new Blob([exportText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `competitor-content-export-${new Date().toISOString().split('T')[0]}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        alert(`Exported ${totalItems} content items!\n\nNext step: Open the downloaded file and copy everything into claude.ai for analysis.`);
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('Error exporting content: ' + error.message);
+    }
+});
