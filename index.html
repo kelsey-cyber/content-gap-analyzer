@@ -1,1 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Gap Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Content Gap Analyzer</h1>
+            <nav>
+                <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+                <button class="tab-btn" data-tab="competitors">Competitors</button>
+                <button class="tab-btn" data-tab="content">Add Content</button>
+                <button class="tab-btn" data-tab="settings">Settings</button>
+            </nav>
+        </header>
 
+        <!-- DASHBOARD TAB -->
+        <div id="dashboard" class="tab-content active">
+            <div class="action-bar">
+                <button id="runAnalysis" class="btn-primary">🔄 Run Analysis</button>
+                <button id="exportReport" class="btn-secondary">📥 Export Report</button>
+                <span id="lastAnalysis" class="last-update"></span>
+            </div>
+
+            <div id="loadingAnalysis" class="loading" style="display:none;">
+                <div class="spinner"></div>
+                <p>Analyzing competitor content...</p>
+            </div>
+
+            <div id="reportContainer" style="display:none;">
+                <section class="summary-card">
+                    <h2>Executive Summary</h2>
+                    <p id="executiveSummary"></p>
+                </section>
+
+                <section class="chart-section">
+                    <h2>Pillar Performance</h2>
+                    <canvas id="pillarChart"></canvas>
+                </section>
+
+                <section class="gaps-section">
+                    <h2>🔥 Top Content Gaps</h2>
+                    <div id="topGaps"></div>
+                </section>
+
+                <section class="trends-section">
+                    <h2>📈 Trending Themes</h2>
+                    <div id="trendingThemes" class="theme-tags"></div>
+                </section>
+
+                <section class="recommendations-section">
+                    <h2>📅 Recommended Content Calendar</h2>
+                    <div id="contentCalendar"></div>
+                </section>
+            </div>
+
+            <div id="noDataMessage" class="empty-state">
+                <p>👋 Welcome! Add competitors and run your first analysis to get started.</p>
+            </div>
+        </div>
+
+        <!-- COMPETITORS TAB -->
+        <div id="competitors" class="tab-content">
+            <div class="action-bar">
+                <button id="addCompetitor" class="btn-primary">+ Add Competitor</button>
+            </div>
+
+            <div id="competitorsList" class="competitors-grid"></div>
+
+            <!-- Add Competitor Modal -->
+            <div id="competitorModal" class="modal">
+                <div class="modal-content">
+                    <span class="close">&times;</span>
+                    <h2>Add Competitor</h2>
+                    <form id="competitorForm">
+                        <div class="form-group">
+                            <label>Company Name</label>
+                            <input type="text" id="compName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Blog URL</label>
+                            <input type="url" id="compBlog" placeholder="https://...">
+                        </div>
+                        <div class="form-group">
+                            <label>Instagram Handle</label>
+                            <input type="text" id="compInstagram" placeholder="@username">
+                        </div>
+                        <div class="form-group">
+                            <label>TikTok Handle</label>
+                            <input type="text" id="compTiktok" placeholder="@username">
+                        </div>
+                        <div class="form-group">
+                            <label>Email Sender (from newsletters)</label>
+                            <input type="email" id="compEmail" placeholder="newsletter@brand.com">
+                        </div>
+                        <button type="submit" class="btn-primary">Save Competitor</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADD CONTENT TAB (Manual TikTok Input) -->
+        <div id="content" class="tab-content">
+            <h2>Manually Add Content</h2>
+            <p class="subtitle">Use this for TikTok videos or other content you want to track</p>
+            
+            <form id="manualContentForm">
+                <div class="form-group">
+                    <label>Competitor</label>
+                    <select id="contentCompetitor" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Platform</label>
+                    <select id="contentPlatform" required>
+                        <option value="tiktok">TikTok</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Content URL</label>
+                    <input type="url" id="contentUrl" required>
+                </div>
+                <div class="form-group">
+                    <label>Title/Description</label>
+                    <input type="text" id="contentTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>Content Summary</label>
+                    <textarea id="contentSummary" rows="4" placeholder="What is this content about?"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Publish Date</label>
+                    <input type="date" id="contentDate" required>
+                </div>
+                <button type="submit" class="btn-primary">Add Content</button>
+            </form>
+
+            <div class="recent-additions">
+                <h3>Recently Added</h3>
+                <div id="recentContent"></div>
+            </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div id="settings" class="tab-content">
+            <h2>Settings</h2>
+            
+            <section class="settings-section">
+                <h3>Content Pillars</h3>
+                <p class="subtitle">These categories are used to analyze content</p>
+                <div id="pillarsList"></div>
+            </section>
+
+            <section class="settings-section">
+                <h3>Claude API</h3>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="password" id="claudeApiKey" placeholder="sk-ant-...">
+                    <button id="saveApiKey" class="btn-secondary">Save</button>
+                </div>
+                <p class="help-text">Get your API key from <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+            </section>
+
+            <section class="settings-section">
+                <h3>Gmail Integration</h3>
+                <button id="connectGmail" class="btn-secondary">Connect Gmail</button>
+                <p id="gmailStatus" class="help-text">Not connected</p>
+            </section>
+
+            <section class="settings-section">
+                <h3>Analysis Frequency</h3>
+                <select id="analysisFrequency">
+                    <option value="manual">Manual Only</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Bi-weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </section>
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- App Scripts -->
+    <script src="firebase-config.js"></script>
+    <script src="competitors.js"></script>
+    <script src="analysis.js"></script>
+    <script src="dashboard.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
