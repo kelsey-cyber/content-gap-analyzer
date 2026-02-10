@@ -235,3 +235,216 @@ async function loadLatestReport() {
         document.getElementById('noDataMessage').style.display = 'block';
     }
 }
+// Export all content for manual Claude analysis
+document.getElementById('exportAllContent').addEventListener('click', async () => {
+    try {
+        // Get all content items
+        const snapshot = await contentItemsRef.orderBy('publishDate', 'desc').get();
+        
+        if (snapshot.empty) {
+            alert('No content to export. Add some competitor content first!');
+            return;
+        }
+        
+        // Organize content
+        const contentByCompetitor = {};
+        const contentByPillar = {};
+        let totalItems = 0;
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const competitor = currentCompetitors.find(c => c.id === data.competitorId);
+            const competitorName = competitor?.name || 'Unknown';
+            
+            // By competitor
+            if (!contentByCompetitor[competitorName]) {
+                contentByCompetitor[competitorName] = [];
+            }
+            contentByCompetitor[competitorName].push(data);
+            
+            // By pillar (if categorized)
+            if (data.pillar) {
+                if (!contentByPillar[data.pillar]) {
+                    contentByPillar[data.pillar] = [];
+                }
+                contentByPillar[data.pillar].push({
+                    ...data,
+                    competitorName
+                });
+            }
+            
+            totalItems++;
+        });
+        
+        // Generate export text
+        const exportText = `
+COMPETITIVE CONTENT ANALYSIS
+Export Date: ${new Date().toLocaleDateString()}
+Total Content Items: ${totalItems}
+Date Range: Last 30 days
+Competitors Tracked: ${Object.keys(contentByCompetitor).join(', ')}
+
+========================================
+CONTENT PILLARS FOR ANALYSIS
+========================================
+
+1. Lifestyle/Self-Care
+2. Seasonal/Gifting
+3. Ingredient Education
+4. Sustainability
+5. Product Rituals
+6. Sensory Experience
+7. Problem-Solution
+
+========================================
+CONTENT BY COMPETITOR
+========================================
+
+${Object.entries(contentByCompetitor).map(([competitor, items]) => `
+${competitor.toUpperCase()} (${items.length} items)
+${'='.repeat(50)}
+
+${items.map((item, index) => `
+${index + 1}. ${item.title}
+   Platform: ${item.platform}
+   Date: ${item.publishDate?.toDate?.()?.toLocaleDateString() || 'No date'}
+   ${item.pillar ? `Pillar: ${item.pillar}` : ''}
+   
+   Content: ${item.content || 'No summary'}
+   URL: ${item.url}
+   
+`).join('\n')}
+`).join('\n')}
+
+========================================
+ANALYSIS REQUEST FOR CLAUDE
+========================================
+
+Please analyze this competitive content and provide:
+
+1. CONTENT GAP ANALYSIS
+   - Which pillars are competitors investing in most heavily?
+   - Which pillars am I underrepresented in?
+   - What specific themes/topics are trending across competitors?
+
+2. TOP 3 CONTENT GAPS
+   - Identify the biggest opportunities
+   - Provide specific content recommendations
+   - Note which competitors are doing this well
+
+3. TRENDING THEMES
+   - What topics/hashtags appear most frequently?
+   - Any seasonal opportunities coming up?
+   - Emerging trends in natural body care?
+
+4. RECOMMENDED CONTENT CALENDAR
+   - Suggest 5-7 specific content ideas for the next 30 days
+   - Organize by pillar
+   - Include rationale for each recommendation
+
+5. COMPETITOR INSIGHTS
+   - Which competitor has the strongest content strategy overall?
+   - What formats are performing best (video, carousel, blog)?
+   - Any standout examples worth studying?
+
+Please format your response with clear sections and actionable recommendations.
+        `.trim();
+        
+        // Create downloadable file
+        const blob = new Blob([exportText], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `competitor-content-export-${new Date().toISOString().split('T')[0]}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        alert(`Exported ${totalItems} content items!\n\nNext step: Open the downloaded file and copy everything into claude.ai for analysis.`);
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('Error exporting content: ' + error.message);
+    }
+});
+```
+
+---
+
+## **WORKFLOW: How to Use Your Free Competitive Intelligence System**
+
+### **🎯 MONTHLY WORKFLOW (Recommended)**
+
+#### **Week 1-3: Content Collection**
+
+**Daily (5-10 minutes):**
+1. Browse competitor social media (Instagram, TikTok)
+2. Check competitor blogs for new posts
+3. Watch your dedicated Gmail inbox for competitor newsletters
+
+**When you find interesting content:**
+1. Open your Content Gap Analyzer app
+2. Click **"Add Content"** tab
+3. Fill out the form:
+   - Select competitor
+   - Choose platform
+   - Paste URL
+   - Add title & quick summary (2-3 sentences)
+   - Set publish date
+4. Click "Add Content"
+
+**Aim for:** 15-20 competitor content pieces per month across all competitors
+
+---
+
+#### **Week 4: Monthly Analysis**
+
+**Step 1: Export Your Data (2 minutes)**
+1. Open your Content Gap Analyzer
+2. Click **"Dashboard"** tab
+3. Click **"📤 Export All Content"** button
+4. Save the .txt file that downloads
+
+**Step 2: Analyze with Claude (10 minutes)**
+1. Go to **claude.ai** (free tier)
+2. Start new conversation
+3. Open your exported .txt file
+4. Copy **everything** from the file
+5. Paste it into Claude
+6. Hit send
+
+**Step 3: Review & Save Insights (10 minutes)**
+1. Claude will give you:
+   - Content gap analysis by pillar
+   - Top 3 opportunities
+   - Trending themes
+   - Recommended content calendar
+   - Competitor insights
+
+2. Copy Claude's response
+3. Save it in a Google Doc or notes app
+4. Title it: "Content Analysis - [Month] [Year]"
+
+**Step 4: Plan Your Content (15 minutes)**
+1. Review the recommended content calendar
+2. Add ideas to your actual content planning tool
+3. Prioritize based on your bandwidth
+4. Assign to your creative team
+
+---
+
+### **🔄 QUARTERLY WORKFLOW (Optional Deep Dive)**
+
+**Every 3 months:**
+1. Export all content from the quarter
+2. Ask Claude to compare trends month-over-month
+3. Identify which competitors are gaining momentum
+4. Spot seasonal patterns for future planning
+
+**Prompt for Claude:**
+```
+I'm giving you 3 months of competitor content data. 
+Please analyze:
+- How have content themes evolved over the quarter?
+- Which competitors increased output in which pillars?
+- What seasonal patterns do you see?
+- What should I prepare for next quarter?
