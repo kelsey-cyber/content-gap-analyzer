@@ -2,12 +2,12 @@
 // Replace these values with your Firebase project credentials
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCv9KJtpw4cGQ6JFdPp6YGbFW-cR72IoHQ",
+  authDomain: "content-gap-analyzer-6e816.firebaseapp.com",
+  projectId: "content-gap-analyzer-6e816",
+  storageBucket: "content-gap-analyzer-6e816.firebasestorage.app",
+  messagingSenderId: "700143801700",
+  appId: "1:700143801700:web:d6765fda0f61a2a2bd5671"
 };
 
 // Initialize Firebase
