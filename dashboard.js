@@ -235,11 +235,9 @@ async function loadLatestReport() {
         document.getElementById('noDataMessage').style.display = 'block';
     }
 }
-
 // Export all content for manual Claude analysis
 document.getElementById('exportAllContent').addEventListener('click', async () => {
     try {
-        // Get all content items
         const snapshot = await contentItemsRef.orderBy('collectedDate', 'desc').get();
         
         if (snapshot.empty) {
@@ -247,106 +245,79 @@ document.getElementById('exportAllContent').addEventListener('click', async () =
             return;
         }
         
-        // Organize content
-        const contentByCompetitor = {};
-        let totalItems = 0;
+        let exportText = 'COMPETITIVE CONTENT ANALYSIS\n';
+        exportText += 'Export Date: ' + new Date().toLocaleDateString() + '\n';
+        exportText += 'Total Items: ' + snapshot.size + '\n\n';
+        exportText += '========================================\n';
+        exportText += 'CONTENT PILLARS\n';
+        exportText += '========================================\n\n';
+        exportText += '1. Lifestyle/Self-Care\n';
+        exportText += '2. Seasonal/Gifting\n';
+        exportText += '3. Ingredient Education\n';
+        exportText += '4. Sustainability\n';
+        exportText += '5. Product Rituals\n';
+        exportText += '6. Sensory Experience\n';
+        exportText += '7. Problem-Solution\n\n';
+        exportText += '========================================\n';
+        exportText += 'COMPETITOR CONTENT\n';
+        exportText += '========================================\n\n';
         
+        let itemNum = 1;
         snapshot.forEach(doc => {
             const data = doc.data();
             const competitor = currentCompetitors.find(c => c.id === data.competitorId);
             const competitorName = competitor?.name || 'Unknown';
+            const dateStr = data.publishDate?.toDate?.()?.toLocaleDateString() || 'No date';
             
-            if (!contentByCompetitor[competitorName]) {
-                contentByCompetitor[competitorName] = [];
+            exportText += itemNum + '. ' + data.title + '\n';
+            exportText += '   Competitor: ' + competitorName + '\n';
+            exportText += '   Platform: ' + data.platform + '\n';
+            exportText += '   Date: ' + dateStr + '\n';
+            if (data.pillar) {
+                exportText += '   Pillar: ' + data.pillar + '\n';
             }
-            contentByCompetitor[competitorName].push(data);
-            totalItems++;
+            exportText += '   Content: ' + (data.content || 'No summary') + '\n';
+            exportText += '   URL: ' + data.url + '\n\n';
+            itemNum++;
         });
         
-        // Generate export text
-        const exportText = `COMPETITIVE CONTENT ANALYSIS
-Export Date: ${new Date().toLocaleDateString()}
-Total Content Items: ${totalItems}
-Competitors Tracked: ${Object.keys(contentByCompetitor).join(', ')}
-
-========================================
-CONTENT PILLARS FOR ANALYSIS
-========================================
-
-1. Lifestyle/Self-Care
-2. Seasonal/Gifting
-3. Ingredient Education
-4. Sustainability
-5. Product Rituals
-6. Sensory Experience
-7. Problem-Solution
-
-========================================
-CONTENT BY COMPETITOR
-========================================
-
-${Object.entries(contentByCompetitor).map(([competitor, items]) => `
-${competitor.toUpperCase()} (${items.length} items)
-${'='.repeat(50)}
-
-${items.map((item, index) => `
-${index + 1}. ${item.title}
-   Platform: ${item.platform}
-   Date: ${item.publishDate?.toDate?.()?.toLocaleDateString() || 'No date'}
-   ${item.pillar ? `Pillar: ${item.pillar}` : ''}
-   
-   Content: ${item.content || 'No summary'}
-   URL: ${item.url}
-   
-`).join('')}
-`).join('')}
-
-========================================
-ANALYSIS REQUEST FOR CLAUDE
-========================================
-
-Please analyze this competitive content and provide:
-
-1. CONTENT GAP ANALYSIS
-   - Which pillars are competitors investing in most heavily?
-   - Which pillars am I underrepresented in?
-   - What specific themes/topics are trending across competitors?
-
-2. TOP 3 CONTENT GAPS
-   - Identify the biggest opportunities
-   - Provide specific content recommendations
-   - Note which competitors are doing this well
-
-3. TRENDING THEMES
-   - What topics/hashtags appear most frequently?
-   - Any seasonal opportunities coming up?
-   - Emerging trends in natural body care?
-
-4. RECOMMENDED CONTENT CALENDAR
-   - Suggest 5-7 specific content ideas for the next 30 days
-   - Organize by pillar
-   - Include rationale for each recommendation
-
-5. COMPETITOR INSIGHTS
-   - Which competitor has the strongest content strategy overall?
-   - What formats are performing best (video, carousel, blog)?
-   - Any standout examples worth studying?
-
-Please format your response with clear sections and actionable recommendations.`;
+        exportText += '========================================\n';
+        exportText += 'ANALYSIS REQUEST\n';
+        exportText += '========================================\n\n';
+        exportText += 'Please analyze this competitive content and provide:\n\n';
+        exportText += '1. CONTENT GAP ANALYSIS\n';
+        exportText += '   - Which pillars are competitors investing in?\n';
+        exportText += '   - Which pillars am I underrepresented in?\n';
+        exportText += '   - What themes are trending?\n\n';
+        exportText += '2. TOP 3 CONTENT GAPS\n';
+        exportText += '   - Biggest opportunities\n';
+        exportText += '   - Specific recommendations\n';
+        exportText += '   - Which competitors doing this well\n\n';
+        exportText += '3. TRENDING THEMES\n';
+        exportText += '   - Most frequent topics/hashtags\n';
+        exportText += '   - Seasonal opportunities\n';
+        exportText += '   - Emerging trends\n\n';
+        exportText += '4. RECOMMENDED CONTENT CALENDAR\n';
+        exportText += '   - 5-7 content ideas for next 30 days\n';
+        exportText += '   - Organized by pillar\n';
+        exportText += '   - Rationale for each\n\n';
+        exportText += '5. COMPETITOR INSIGHTS\n';
+        exportText += '   - Strongest content strategy overall\n';
+        exportText += '   - Best performing formats\n';
+        exportText += '   - Standout examples\n';
         
-        // Create downloadable file
         const blob = new Blob([exportText], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `competitor-content-export-${new Date().toISOString().split('T')[0]}.txt`;
+        a.download = 'competitor-content-export-' + new Date().toISOString().split('T')[0] + '.txt';
         a.click();
         URL.revokeObjectURL(url);
         
-        alert(`Exported ${totalItems} content items!\n\nNext step: Open the downloaded file and copy everything into claude.ai for analysis.`);
+        alert('Exported ' + snapshot.size + ' content items!\n\nNext: Open the file and copy into claude.ai');
         
     } catch (error) {
         console.error('Export error:', error);
-        alert('Error exporting content: ' + error.message);
+        alert('Error exporting: ' + error.message);
     }
 });
